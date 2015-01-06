@@ -13,9 +13,8 @@ type FlagSet interface {
 }
 
 var (
-	ErrNoCommand     = errors.New("No command specified")
+	ErrNoCommand     = errors.New("No command selected")
 	ErrAlreadyParsed = errors.New("Parse can be invoked at most once")
-	ErrNoRunFunction = errors.New("No run function specified")
 )
 
 type CommandSet struct {
@@ -49,7 +48,7 @@ func (c *CommandSet) Run(args []string) error {
 	}
 
 	if cmd.Run == nil {
-		return ErrNoRunFunction
+		return fmt.Errorf("Missing 'run' function")
 	}
 
 	cmd.Run(cmd, args)
@@ -133,6 +132,10 @@ func (c *Command) Parsed() bool {
 }
 
 var CommandLine = &Command{}
+
+func ProgramName(name string) {
+	CommandLine.name = name
+}
 
 func SubCommand(name string, short, long string) (*Command, error) {
 	return CommandLine.SubCommand(name, short, long)
