@@ -15,6 +15,7 @@ type FlagSet interface {
 var (
 	ErrNoCommand     = errors.New("No command selected")
 	ErrAlreadyParsed = errors.New("Parse can be invoked at most once")
+	ErrNotParsed     = errors.New("Not parsed yet")
 )
 
 type CommandSet struct {
@@ -41,17 +42,20 @@ func (c *CommandSet) AddCommand(name string, short, long string) (*Command, erro
 	return cmd, nil
 }
 
-func (c *CommandSet) Run(args []string) error {
-	cmd := c.Parse(args)
-	if cmd == nil {
+func (c *CommandSet) RunNext() error {
+	if !c.parsed {
+		return ErrNotParsed
+	}
+	if c.selected == nil {
 		return ErrNoCommand
 	}
 
+	cmd := c.selected
 	if cmd.Run == nil {
-		return fmt.Errorf("Missing 'run' function")
+		return fmt.Errorf("Command not runnable")
 	}
 
-	cmd.Run(cmd, args)
+	cmd.Run(cmd, c.args)
 	return nil
 }
 
@@ -83,6 +87,10 @@ func (c *CommandSet) Parsed() bool {
 
 func (c *CommandSet) Selected() *Command {
 	return c.selected
+}
+
+func (c *CommandSet) Args() []string {
+	return c.args
 }
 
 type Command struct {
@@ -125,6 +133,13 @@ func (c *Command) Parse(args []string) error {
 
 	c.sub.Parse(c.Flags.Args())
 	return nil
+}
+
+func (c *Command) RunNext() error {
+	if !c.parsed {
+		return ErrNotParsed
+	}
+	return c.sub.RunNext()
 }
 
 func (c *Command) Parsed() bool {
